@@ -4,6 +4,8 @@ https://github.com/marketplace/actions/autopep8
 
 Reusing function for task 1 and task 4
 
+Rewriting http code to use aiohttp instead of requests, as per this article: https://realpython.com/async-io-python/
+
 JSON object sample:
 
 [

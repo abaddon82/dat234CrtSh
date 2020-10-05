@@ -1,8 +1,10 @@
 import sys
-import functools
 from CrtSh import CrtSh
+import asyncio
+from aiohttp import ClientSession
 
-crtsh = CrtSh()
+
+crtsh = CrtSh(ClientSession())
 
 domain = crtsh.parse_commandline(sys.argv)
 
@@ -26,9 +28,11 @@ if domain:
                 print('done! Checking domains...')
                 onlinelist, offlinelist = crtsh.check_domains(domainstocheck)
                 print("\nOnline domains:\n---------------\n")
-                for domain in onlinelist:
-                    title = crtsh.scrape_domain(domain)
-                    print("{0} ({1})".format(domain, title))
+                with crtsh.session:
+                    for domain in onlinelist:
+                        title = crtsh.scrape_domain(domain)
+                        print("{0} ({1})".format(domain, title))
+
                 print("\nOffline domains:\n----------------\n")
                 for domain in offlinelist:
                     print(domain)

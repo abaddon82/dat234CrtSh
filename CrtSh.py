@@ -1,4 +1,5 @@
-import requests
+import aiohttp
+import asyncio
 import argparse
 import validators
 import re
@@ -8,10 +9,20 @@ from bs4 import BeautifulSoup
 class CrtSh:
 
     CRTSH_DOMAIN = 'crt.sh'
+    session = None
 
-    def check_connectivity(self, domain:
-                           str = CRTSH_DOMAIN,
-                           retcode: int = None) -> bool:
+    def __init__(self, session: aiohttp.ClientSession):
+        """
+            Class constructor
+
+            :param session: aiohttp ClientSession object
+            :type session: ClientSession
+        """
+        self.session = session
+
+    async def check_connectivity(self, domain:
+                                 str = CRTSH_DOMAIN,
+                                 retcode: int = None) -> bool:
         """
             Task 1 & 4: Check if we can connect to a given domain.
 
@@ -26,17 +37,17 @@ class CrtSh:
         """
         try:
             domaintocheck = "https://{0}".format(domain)
-            result = requests.get(domaintocheck)
+            result = await self.session.request(method='GET',
+                                                url=domaintocheck)
+            # result = requests.get(domaintocheck)
             if retcode is not None:
-                if result.status_code == retcode:
+                if result.status == retcode:
                     return True
                 else:
                     return False
             else:
                 return True
-        except requests.exceptions.ConnectTimeout:
-            return False
-        except requests.exceptions.ConnectionError:
+        except:
             return False
 
     def parse_commandline(self, argv: list) -> str:
@@ -61,7 +72,7 @@ class CrtSh:
         else:
             return None
 
-    def retrieve_cert_data(self, domain: str) -> dict:
+    async def retrieve_cert_data(self, domain: str) -> dict:
         """
             Task 3a: Retrieve list of issued certificates to be analyzed.
 
@@ -74,8 +85,11 @@ class CrtSh:
         try:
             query = {'output': 'json', 'q': domain}
             searchurl = "https://{0}".format(CrtSh.CRTSH_DOMAIN)
-            result = requests.get(url=searchurl, params=query)
-            return result.json()
+            result = await self.session.request(method='GET',
+                                                url=searchurl,
+                                                params=query)
+
+            return await result.json()
         except:
             return None
 
@@ -139,7 +153,7 @@ class CrtSh:
 
         return subdomainlist
 
-    def check_domains(self, domainstocheck: list) -> tuple:
+    async def check_domains(self, domainstocheck: list) -> tuple:
         """
             Task 5: Check list of domains for connectivity
 
@@ -156,16 +170,17 @@ class CrtSh:
         onlinelist = []
         offlinelist = []
 
-        for domaintocheck in domainstocheck:
-            online = self.check_connectivity(domaintocheck)
-            if online:
-                onlinelist.append(domaintocheck)
-            else:
-                offlinelist.append(domaintocheck)
+        async with self.session:
+            for domaintocheck in domainstocheck:
+                online = await self.check_connectivity(domaintocheck)
+                if online:
+                    onlinelist.append(domaintocheck)
+                else:
+                    offlinelist.append(domaintocheck)
+        sortedtuple = await asyncio.gather(*(onlinelist, offlinelist))
+        return sortedtuple
 
-        return (onlinelist, offlinelist)
-
-    def scrape_domain(self, domain: str) -> str:
+    async def scrape_domain(self, domain: str) -> str:
         """
             Task 7: Scrape domain web site title
 
@@ -181,9 +196,10 @@ class CrtSh:
 
         try:
             url = "https://{0}/".format(domain)
-            response = requests.get(url)
+            response = await self.session.request(method='GET',
+                                                  url=url)
             try:
-                soup = BeautifulSoup(response.text, 'html.parser')
+                soup = BeautifulSoup(await response.text(), 'html.parser')
                 if soup.title is not None:
                     return soup.title.text
                 else:
