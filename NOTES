@@ -6,6 +6,8 @@ Reusing function for task 1 and task 4
 
 Rewriting http code to use aiohttp instead of requests, as per this article: https://realpython.com/async-io-python/
 
+https://www.youtube.com/watch?v=6ow7xloFy5s
+
 JSON object sample:
 
 [

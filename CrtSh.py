@@ -20,9 +20,9 @@ class CrtSh:
         """
         self.session = session
 
-    async def check_connectivity(self, domain:
-                                 str = CRTSH_DOMAIN,
-                                 retcode: int = None) -> bool:
+    def check_connectivity(self, domain:
+                           str = CRTSH_DOMAIN,
+                           retcode: int = None) -> bool:
         """
             Task 1 & 4: Check if we can connect to a given domain.
 
@@ -37,9 +37,8 @@ class CrtSh:
         """
         try:
             domaintocheck = "https://{0}".format(domain)
-            result = await self.session.request(method='GET',
-                                                url=domaintocheck)
-            # result = requests.get(domaintocheck)
+            result = self.session.request(method='GET',
+                                          url=domaintocheck)
             if retcode is not None:
                 if result.status == retcode:
                     return True
