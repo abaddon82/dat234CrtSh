@@ -2,6 +2,7 @@ import requests
 import argparse
 import validators
 import re
+from bs4 import BeautifulSoup
 
 
 class CrtSh:
@@ -140,7 +141,7 @@ class CrtSh:
 
     def check_domains(self, domainstocheck: list) -> tuple:
         """
-            Task 4: Check list of domains for connectivity
+            Task 5: Check list of domains for connectivity
 
             :param domainstocheck: list of domains to check
             :type domainstocheck: list
@@ -163,3 +164,31 @@ class CrtSh:
                 offlinelist.append(domaintocheck)
 
         return (onlinelist, offlinelist)
+
+    def scrape_domain(self, domain: str) -> str:
+        """
+            Task 7: Scrape domain web site title
+
+            :param domain: domain to scrape
+            :type domain: str
+
+            :returns: String with the title of the page, or None
+            :rtype: str
+        """
+
+        if domain is None:
+            return None
+
+        try:
+            url = "https://{0}/".format(domain)
+            response = requests.get(url)
+            try:
+                soup = BeautifulSoup(response.text, 'html.parser')
+                if soup.title is not None:
+                    return soup.title.text
+                else:
+                    return 'No <title> tag'
+            except:
+                return None
+        except:
+            return None

@@ -27,7 +27,8 @@ if domain:
                 onlinelist, offlinelist = crtsh.check_domains(domainstocheck)
                 print("\nOnline domains:\n---------------\n")
                 for domain in onlinelist:
-                    print(domain)
+                    title = crtsh.scrape_domain(domain)
+                    print("{0} ({1})".format(domain, title))
                 print("\nOffline domains:\n----------------\n")
                 for domain in offlinelist:
                     print(domain)
