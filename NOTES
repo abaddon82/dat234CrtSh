@@ -1,3 +1,21 @@
 Søke-URL Crt.sh: https://crt.sh/?q=<domene>&output=json
 
 https://github.com/marketplace/actions/autopep8
+
+Reusing function for task 1 and task 4
+
+JSON object sample:
+
+[
+    {
+        "issuer_ca_id": 949,
+        "issuer_name": "C=NO, O=Buypass AS-983163327, CN=Buypass Class 2 CA 2",
+        "common_name": "webmail.lillesand.kommune.no",
+        "name_value": "autodiscover.lillesand.kommune.no\nwebmail.lillesand.kommune.no",
+        "id": 3385124619,
+        "entry_timestamp": "2020-09-15T16: 28: 14.13",
+        "not_before": "2020-09-15T16: 28: 08",
+        "not_after": "2021-09-15T21: 59: 00",
+        "serial_number": "44e2c4ffc44aadee2027"
+    }
+]
