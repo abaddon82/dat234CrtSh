@@ -11,14 +11,14 @@ class CrtSh:
     CRTSH_DOMAIN = 'crt.sh'
     session = None
 
-    def __init__(self):
+    def __init__(self, cs):
         """
             Class constructor
 
             :param session: aiohttp ClientSession object
             :type session: ClientSession
         """
-        self.session = aiohttp.ClientSession()
+        self.session = cs
 
     async def aio_check_connectivity(self, domain:
                                      str = CRTSH_DOMAIN,
@@ -35,13 +35,37 @@ class CrtSh:
             :returns: true if domain is alive, false if not
             :rtype: bool
         """
-        result = await self.session.request(method='GET',
-                                            url=domain)
-
-        if result is not None:
-            return result.status
-        else:
-            return result
+        try:
+            async with self.session.get(url=domain) as response:
+                if response is not None:
+                    print("Domain {0} returned status {1}".format(domain, response.status))
+                    return response.status
+                else:
+                    print("Domain {0} did not respond in a timely fashion".format(domain))
+                    return response
+        except aiohttp.client_exceptions.ClientConnectorCertificateError as ex:
+            print("{0}: Certificate validation error, skipping".format(domain))
+            return None
+        except aiohttp.client_exceptions.ClientConnectorError as ex:
+            if ex.errno == 11001:
+                print("{0} did not resolve, skipping".format(domain))
+            elif ex.errno == 22:
+                print("{0}: connection refused, skipping".format(domain))
+            else:
+                print("{0}: connection error: {1}".format(domain, ex.strerror))
+            return None
+        except aiohttp.client_exceptions.ClientConnectionError as ex:
+            if ex.errno == 11001:
+                print("{0} did not resolve, skipping".format(domain))
+            else:
+                print("{0}: Error: {1}: {2}".format(domain, type(ex).__name__, ex.args))
+            return None
+        except OSError as ex:
+            print("Domain {0} - unknown error: {1}: {2}".format(domain, type(ex).__name__, ex.args))
+            return None
+        except Exception as ex:
+            print("Domain {0} - unknown error: {1}: {2}".format(domain, type(ex).__name__, ex.args))
+            return None
 
     async def check_connectivity(self, domain:
                            str = CRTSH_DOMAIN,
@@ -69,7 +93,10 @@ class CrtSh:
                 else:
                     return False
             else:
-                return True
+                if result is not None:
+                    return True
+                else:
+                    return False
         except:
             return False
 
@@ -108,11 +135,10 @@ class CrtSh:
         try:
             query = {'output': 'json', 'q': domain}
             searchurl = "https://{0}".format(CrtSh.CRTSH_DOMAIN)
-            result = await self.session.request(method='GET',
-                                                url=searchurl,
-                                                params=query)
 
-            return await result.json()
+            async with self.session.get(url=searchurl, params=query) as response:
+                return await response.json()
+
         except:
             return None
 
@@ -194,24 +220,25 @@ class CrtSh:
         offlinelist = []
 
         tasklist = []
-        task_semaphore = asyncio.Semaphore(200)
 
-        for domaintocheck in domainstocheck:
-            #print("Adding {0} to tasklist".format(domaintocheck))
-            checktask = asyncio.create_task(self.check_connectivity(domaintocheck), name=domaintocheck)
-            tasklist.append(checktask)
+        try:
+            for domaintocheck in domainstocheck:
+                #print("Adding {0} to tasklist".format(domaintocheck))
+                checktask = asyncio.create_task(self.check_connectivity(domaintocheck), name=domaintocheck)
+                tasklist.append(checktask)
 
-        async with task_semaphore:
-            checkresults = await asyncio.gather(*tasklist)
+            result = await asyncio.gather(*tasklist)
 
-        for task in tasklist:
-            domain = task.get_name()
-            if task.result:
-                onlinelist.append(domain)
-            else:
-                offlinelist.append(domain)
+            for task in tasklist:
+                domain = task.get_name()
+                if task.result():
+                    onlinelist.append(domain)
+                else:
+                    offlinelist.append(domain)
 
-        return (onlinelist, offlinelist)
+            return (onlinelist, offlinelist)
+        except:
+            return (None, None)
 
     async def scrape_domain(self, domain: str) -> str:
         """
@@ -229,15 +256,19 @@ class CrtSh:
 
         try:
             url = "https://{0}/".format(domain)
-            response = await self.session.request(method='GET',
-                                                  url=url)
-            try:
-                soup = BeautifulSoup(await response.text(), 'html.parser')
-                if soup.title is not None:
-                    return soup.title.text
-                else:
-                    return 'No <title> tag'
-            except:
-                return None
+
+            async with self.session.get(url=url) as response:
+                try:
+                    data = await response.text()
+                    if data:
+                        soup = BeautifulSoup(data, 'html.parser')
+                        if soup.title is not None:
+                            return soup.title.text
+                        else:
+                            return 'No <title> tag'
+                    else:
+                        return None
+                except:
+                    return None
         except:
             return None

@@ -9,7 +9,7 @@
             "type": "python",
             "request": "launch",
             "program": "${file}",
-            "args": ["lillesand.kommune.no"],
+            "args": ["sol.no"],
             "console": "integratedTerminal"
         }
     ]
