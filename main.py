@@ -4,53 +4,58 @@ import asyncio
 from aiohttp import ClientSession
 
 
-crtsh = CrtSh(ClientSession())
+async def main():
+    crtsh = CrtSh()
 
-domain = crtsh.parse_commandline(sys.argv)
+    domain = crtsh.parse_commandline(sys.argv)
 
-if domain:
-    print("Checking connectivity to {0}...".format(CrtSh.CRTSH_DOMAIN),
-          end='', flush=True)
-
-    if crtsh.check_connectivity(retcode=200):
-        print('all good!')
-        print("Retrieving certificates for domain {0}...".format(domain),
+    if domain:
+        print("Checking connectivity to {0}...".format(CrtSh.CRTSH_DOMAIN),
               end='', flush=True)
-        certdata = crtsh.retrieve_cert_data(domain)
-        if certdata is not None:
-            sanitized_certdata = crtsh.sanitize_cert_data(certdata)
-            domainstocheck = crtsh.get_subdomains(domain, list(
-                                                  filter(lambda domain:
-                                                         sanitized_certdata
-                                                         [domain]['valid'],
-                                                         sanitized_certdata)))
-            if domainstocheck:
-                print('done! Checking domains...')
-                onlinelist, offlinelist = crtsh.check_domains(domainstocheck)
-                print("\nOnline domains:\n---------------\n")
-                with crtsh.session:
-                    for domain in onlinelist:
-                        title = crtsh.scrape_domain(domain)
-                        print("{0} ({1})".format(domain, title))
 
-                print("\nOffline domains:\n----------------\n")
-                for domain in offlinelist:
-                    print(domain)
+        if await crtsh.check_connectivity(retcode=200):
+            print('all good!')
+            print("Retrieving certificates for domain {0}...".format(domain),
+                  end='', flush=True)
+            certdata = await crtsh.retrieve_cert_data(domain)
+            if certdata is not None:
+                sanitized_certdata = crtsh.sanitize_cert_data(certdata)
+                domainstocheck = crtsh.get_subdomains(domain, list(
+                                                      filter(lambda domain:
+                                                             sanitized_certdata
+                                                             [domain]['valid'],
+                                                             sanitized_certdata
+                                                             )))
+                if domainstocheck:
+                    print('done! Checking domains...')
+                    onlinelist, offlinelist = await crtsh.check_domains(domainstocheck)
+                    print("\nOnline domains:\n---------------\n")
+                    async with crtsh.session:
+                        for domain in onlinelist:
+                            title = await crtsh.scrape_domain(domain)
+                            print("{0} ({1})".format(domain, title))
 
-                onlinecount = len(onlinelist)
-                offlinecount = len(offlinelist)
-                totalcount = onlinecount + offlinecount
+                    print("\nOffline domains:\n----------------\n")
+                    for domain in offlinelist:
+                        print(domain)
 
-                percentageonline = (onlinecount / totalcount) * 100
+                    onlinecount = len(onlinelist)
+                    offlinecount = len(offlinelist)
+                    totalcount = onlinecount + offlinecount
 
-                print("\n\n{0} / {1} ({2:.4g}%) domains were online when we checked!\n".format(
-                    onlinecount, totalcount, percentageonline
-                ))
+                    percentageonline = (onlinecount / totalcount) * 100
 
+                    print("\n\n{0} / {1} ({2:.4g}%) domains were online when we checked!\n".format(
+                        onlinecount, totalcount, percentageonline
+                    ))
+
+                else:
+                    print("done, but there are no certificates issued to this domain.")
             else:
-                print("done, but there are no certificates issued to this domain.")
+                print('domain not found!')
         else:
-            print('domain not found!')
-    else:
-        print("looks like it's down, try again later")
-        sys.exit(-1)
+            print("looks like it's down, try again later")
+            sys.exit(-1)
+
+if __name__ == "__main__":
+    asyncio.run(main())

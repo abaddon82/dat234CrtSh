@@ -11,16 +11,39 @@ class CrtSh:
     CRTSH_DOMAIN = 'crt.sh'
     session = None
 
-    def __init__(self, session: aiohttp.ClientSession):
+    def __init__(self):
         """
             Class constructor
 
             :param session: aiohttp ClientSession object
             :type session: ClientSession
         """
-        self.session = session
+        self.session = aiohttp.ClientSession()
 
-    def check_connectivity(self, domain:
+    async def aio_check_connectivity(self, domain:
+                                     str = CRTSH_DOMAIN,
+                                     retcode: int = None) -> bool:
+        """
+            Task 8a: Check if we can connect to a given domain, asynchronously
+
+            :param domain: domain to check for connectivity
+            :type domain: str
+
+            :param retcode: check for certain http status code.
+            :type retcode: int
+
+            :returns: true if domain is alive, false if not
+            :rtype: bool
+        """
+        result = await self.session.request(method='GET',
+                                            url=domain)
+
+        if result is not None:
+            return result.status
+        else:
+            return result
+
+    async def check_connectivity(self, domain:
                            str = CRTSH_DOMAIN,
                            retcode: int = None) -> bool:
         """
@@ -32,15 +55,16 @@ class CrtSh:
             :param retcode: check for certain http status code.
             :type retcode: int
 
-            :returns: true if crt.sh is alive, false if not
+            :returns: true if domain is alive, false if not
             :rtype: bool
         """
         try:
             domaintocheck = "https://{0}".format(domain)
-            result = self.session.request(method='GET',
-                                          url=domaintocheck)
+
+            result = await self.aio_check_connectivity(domaintocheck, retcode)
+
             if retcode is not None:
-                if result.status == retcode:
+                if result == retcode:
                     return True
                 else:
                     return False
@@ -169,15 +193,25 @@ class CrtSh:
         onlinelist = []
         offlinelist = []
 
-        async with self.session:
-            for domaintocheck in domainstocheck:
-                online = await self.check_connectivity(domaintocheck)
-                if online:
-                    onlinelist.append(domaintocheck)
-                else:
-                    offlinelist.append(domaintocheck)
-        sortedtuple = await asyncio.gather(*(onlinelist, offlinelist))
-        return sortedtuple
+        tasklist = []
+        task_semaphore = asyncio.Semaphore(200)
+
+        for domaintocheck in domainstocheck:
+            #print("Adding {0} to tasklist".format(domaintocheck))
+            checktask = asyncio.create_task(self.check_connectivity(domaintocheck), name=domaintocheck)
+            tasklist.append(checktask)
+
+        async with task_semaphore:
+            checkresults = await asyncio.gather(*tasklist)
+
+        for task in tasklist:
+            domain = task.get_name()
+            if task.result:
+                onlinelist.append(domain)
+            else:
+                offlinelist.append(domain)
+
+        return (onlinelist, offlinelist)
 
     async def scrape_domain(self, domain: str) -> str:
         """
