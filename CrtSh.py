@@ -9,20 +9,18 @@ from bs4 import BeautifulSoup
 class CrtSh:
 
     CRTSH_DOMAIN = 'crt.sh'
-    session = None
+    # session = None
 
-    def __init__(self, cs):
+    def __init__(self):
         """
             Class constructor
-
-            :param session: aiohttp ClientSession object
-            :type session: ClientSession
         """
-        self.session = cs
+        # self.session = cs
 
     async def aio_check_connectivity(self, domain:
                                      str = CRTSH_DOMAIN,
-                                     retcode: int = None) -> bool:
+                                     retcode: int = None,
+                                     silent: bool = True) -> bool:
         """
             Task 8a: Check if we can connect to a given domain, asynchronously
 
@@ -32,44 +30,66 @@ class CrtSh:
             :param retcode: check for certain http status code.
             :type retcode: int
 
+            :param silent: do not print results to screen.
+            :type silent: bool
+
             :returns: true if domain is alive, false if not
             :rtype: bool
         """
         try:
-            async with self.session.get(url=domain) as response:
-                if response is not None:
-                    print("Domain {0} returned status {1}".format(domain, response.status))
-                    return response.status
-                else:
-                    print("Domain {0} did not respond in a timely fashion".format(domain))
-                    return response
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url=domain) as response:
+                    if response is not None:
+                        if not silent:            
+                            print("{0}: OK ({1})".
+                                  format(domain, response.status))
+                        return response.status
+                    else:
+                        if not silent:
+                            print("{0}: timeout, skipping".
+                                  format(domain))
+                        return response
         except aiohttp.client_exceptions.ClientConnectorCertificateError as ex:
-            print("{0}: Certificate validation error, skipping".format(domain))
+            if not silent:
+                print("{0}: Certificate validation error, skipping".
+                      format(domain))
             return None
         except aiohttp.client_exceptions.ClientConnectorError as ex:
             if ex.errno == 11001:
-                print("{0} did not resolve, skipping".format(domain))
+                if not silent:
+                    print("{0}: did not resolve, skipping".format(domain))
             elif ex.errno == 22:
-                print("{0}: connection refused, skipping".format(domain))
+                if not silent:
+                    print("{0}: connection refused, skipping".format(domain))
             else:
-                print("{0}: connection error: {1}".format(domain, ex.strerror))
+                if not silent:
+                    print("{0}: connection error: {1}".
+                          format(domain, ex.strerror))
             return None
         except aiohttp.client_exceptions.ClientConnectionError as ex:
             if ex.errno == 11001:
-                print("{0} did not resolve, skipping".format(domain))
+                if not silent:
+                    print("{0}: did not resolve, skipping".format(domain))
             else:
-                print("{0}: Error: {1}: {2}".format(domain, type(ex).__name__, ex.args))
+                if not silent:
+                    print("{0}: Error: {1}: {2}".
+                          format(domain, type(ex).__name__, ex.args))
             return None
         except OSError as ex:
-            print("Domain {0} - unknown error: {1}: {2}".format(domain, type(ex).__name__, ex.args))
+            if not silent:
+                print("{0}: unknown error: {1}: {2}".
+                      format(domain, type(ex).__name__, ex.args))
             return None
         except Exception as ex:
-            print("Domain {0} - unknown error: {1}: {2}".format(domain, type(ex).__name__, ex.args))
+            if not silent:
+                print("{0}: unknown error: {1}: {2}".
+                      format(domain, type(ex).__name__, ex.args))
             return None
 
     async def check_connectivity(self, domain:
-                           str = CRTSH_DOMAIN,
-                           retcode: int = None) -> bool:
+                                 str = CRTSH_DOMAIN,
+                                 retcode: int = None,
+                                 silent: bool = True) -> bool:
         """
             Task 1 & 4: Check if we can connect to a given domain.
 
@@ -79,13 +99,18 @@ class CrtSh:
             :param retcode: check for certain http status code.
             :type retcode: int
 
+            :param silent: do not print results to screen.
+            :type silent: bool
+
             :returns: true if domain is alive, false if not
             :rtype: bool
         """
         try:
             domaintocheck = "https://{0}".format(domain)
 
-            result = await self.aio_check_connectivity(domaintocheck, retcode)
+            result = await self.aio_check_connectivity(domaintocheck,
+                                                       retcode,
+                                                       silent)
 
             if retcode is not None:
                 if result == retcode:
@@ -136,9 +161,10 @@ class CrtSh:
             query = {'output': 'json', 'q': domain}
             searchurl = "https://{0}".format(CrtSh.CRTSH_DOMAIN)
 
-            async with self.session.get(url=searchurl, params=query) as response:
-                return await response.json()
-
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url=searchurl,
+                                       params=query) as response:
+                    return await response.json()
         except:
             return None
 
@@ -196,7 +222,9 @@ class CrtSh:
         for domaintocheck in domainlist:
             domainregexed = domain.replace('.', '\\.')
             subdomainregex = r".*{0}".format(domainregexed)
-            match = re.match(subdomainregex, domaintocheck, flags=re.IGNORECASE)
+            match = re.match(subdomainregex,
+                             domaintocheck,
+                             flags=re.IGNORECASE)
             if match is not None:
                 subdomainlist.append(domaintocheck)
 
@@ -223,8 +251,9 @@ class CrtSh:
 
         try:
             for domaintocheck in domainstocheck:
-                #print("Adding {0} to tasklist".format(domaintocheck))
-                checktask = asyncio.create_task(self.check_connectivity(domaintocheck), name=domaintocheck)
+                # print("Adding {0} to tasklist".format(domaintocheck))
+                checktask = asyncio.create_task(
+                    self.check_connectivity(domaintocheck), name=domaintocheck)
                 tasklist.append(checktask)
 
             result = await asyncio.gather(*tasklist)
@@ -257,18 +286,19 @@ class CrtSh:
         try:
             url = "https://{0}/".format(domain)
 
-            async with self.session.get(url=url) as response:
-                try:
-                    data = await response.text()
-                    if data:
-                        soup = BeautifulSoup(data, 'html.parser')
-                        if soup.title is not None:
-                            return soup.title.text
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url=url) as response:
+                    try:
+                        data = await response.text()
+                        if data:
+                            soup = BeautifulSoup(data, 'html.parser')
+                            if soup.title is not None:
+                                return soup.title.text
+                            else:
+                                return 'No <title> tag'
                         else:
-                            return 'No <title> tag'
-                    else:
-                        return None
-                except:
-                    return None
+                            return 'No HTML data'
+                    except:
+                        return 'No HTML data'
         except:
             return None

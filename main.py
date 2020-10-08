@@ -6,8 +6,8 @@ from aiohttp import ClientSession
 
 async def main():
 
-    session = ClientSession()
-    crtsh = CrtSh(session)
+    # session = ClientSession()
+    crtsh = CrtSh()
     domain = crtsh.parse_commandline(sys.argv)
 
     if domain:
@@ -30,27 +30,34 @@ async def main():
                 if domainstocheck:
                     print('done! Checking domains...')
                     try:
-                        onlinelist, offlinelist = await crtsh.check_domains(domainstocheck)
+                        onlinelist, offlinelist =\
+                            await crtsh.check_domains(domainstocheck)
                     except:
                         print("Error while checking domain status")
-                        return await session.close()
+                        # return await session.close()
                         sys.exit(-1)
 
                     print("\nOnline domains:\n---------------\n")
                     tasklist = []
                     try:
                         for domain in onlinelist:
-                            scrapetask = asyncio.create_task(crtsh.scrape_domain(domain), name=domain)
+                            scrapetask =\
+                                asyncio.create_task(
+                                    crtsh.scrape_domain(domain),
+                                    name=domain)
                             tasklist.append(scrapetask)
-                        
+
                         result = await asyncio.gather(*tasklist)
                         for task in tasklist:
                             domain = task.get_name()
                             if task.result():
-                                print("{0} ({1})".format(domain, task.result()))
+                                print("{0} ({1})".format(domain,
+                                                         task.result()))
+                            else:
+                                print("{0}".format(domain))
                     except:
                         print("Error grabbing domain banners!")
-                        return await session.close()
+                        # return await session.close()
                         sys.exit(-1)
 
                     print("\nOffline domains:\n----------------\n")
@@ -67,18 +74,19 @@ async def main():
                         onlinecount, totalcount, percentageonline
                     ))
 
-                    return await session.close()
+                    # return await session.close()
                 else:
                     print("done, but there are no certificates issued to this domain.")
-                    return await session.close()
+                    # return await session.close()
             else:
                 print('domain not found!')
-                return await session.close()
+                #return await session.close()
         else:
             print("looks like it's down, try again later")
-            await session.close()
+            # await session.close()
             sys.exit(-1)
-
+    return None
 
 if __name__ == "__main__":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     result = asyncio.run(main())

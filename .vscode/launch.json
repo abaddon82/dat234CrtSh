@@ -9,7 +9,7 @@
             "type": "python",
             "request": "launch",
             "program": "${file}",
-            "args": ["sol.no"],
+            "args": ["betauia.net"],
             "console": "integratedTerminal"
         }
     ]
