@@ -1,6 +1,7 @@
 import sys
 from CrtSh import CrtSh
 import asyncio
+import multiprocessing
 from aiohttp import ClientSession
 
 
