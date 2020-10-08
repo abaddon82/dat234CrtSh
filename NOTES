@@ -4,6 +4,22 @@ https://github.com/marketplace/actions/autopep8
 
 Reusing function for task 1 and task 4
 
+Rewriting http code to use aiohttp instead of requests, as per this article: https://realpython.com/async-io-python/
+Python 3.9 asyncio has to_thread() -> could be possible to use requests without to much hassle
+
+https://www.youtube.com/watch?v=6ow7xloFy5s
+
+had issues with using only one ClientSession in aiohttp. Works better when creating
+one ClientSession per request. Might be related to this bug?
+
+https://github.com/aio-libs/aiohttp/issues/3698
+
+According to this (https://stackoverflow.com/questions/62412754/python-asyncio-errors-oserror-winerror-6-the-handle-is-invalid-and-runtim),
+there is an issue with the default event loop on Windows in Python 3.8+.
+
+By changing the default event loop, I solved the issue with the weird exception:
+asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
 JSON object sample:
 
 [
