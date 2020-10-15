@@ -10,14 +10,11 @@ from bs4 import BeautifulSoup
 class CrtSh:
 
     CRTSH_DOMAIN = 'crt.sh'
-    # session = None
 
     def __init__(self):
         """
             Class constructor
         """
-        # self.session = cs
-
     async def aio_check_connectivity(self, domain:
                                      str = CRTSH_DOMAIN,
                                      retcode: int = None,
@@ -252,7 +249,6 @@ class CrtSh:
 
         try:
             for domaintocheck in domainstocheck:
-                # print("Adding {0} to tasklist".format(domaintocheck))
                 checktask = asyncio.create_task(
                     self.check_connectivity(domaintocheck), name=domaintocheck)
                 tasklist.append(checktask)
@@ -304,9 +300,9 @@ class CrtSh:
         except:
             return None
 
+
 async def main():
 
-    # session = ClientSession()
     crtsh = CrtSh()
     domain = crtsh.parse_commandline(sys.argv)
 
@@ -334,7 +330,6 @@ async def main():
                             await crtsh.check_domains(domainstocheck)
                     except:
                         print("Error while checking domain status")
-                        # return await session.close()
                         sys.exit(-1)
 
                     print("\nOnline domains:\n---------------\n")
@@ -357,7 +352,6 @@ async def main():
                                 print("{0}".format(domain))
                     except:
                         print("Error grabbing domain banners!")
-                        # return await session.close()
                         sys.exit(-1)
 
                     print("\nOffline domains:\n----------------\n")
@@ -373,17 +367,12 @@ async def main():
                     print("\n\n{0} / {1} ({2:.4g}%) domains were online when we checked!\n".format(
                         onlinecount, totalcount, percentageonline
                     ))
-
-                    # return await session.close()
                 else:
                     print("done, but there are no certificates issued to this domain.")
-                    # return await session.close()
             else:
                 print('domain not found!')
-                #return await session.close()
         else:
             print("looks like it's down, try again later")
-            # await session.close()
             sys.exit(-1)
     return None
 
